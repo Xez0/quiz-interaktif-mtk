@@ -108,7 +108,50 @@ function doGet(e) {
     var pin = params.pin || "";
     var action = params.action || "";
 
-    // Pemeriksaan Keamanan PIN Guru
+    // Endpoint Publik Khusus Siswa: Periksa status apakah 1 siswa ini sudah pernah submit di spreadsheet
+    // (Privasi ketat: HANYA memeriksa nama & kelas siswa bersangkutan, data siswa lain tidak pernah terekspos)
+    if (action === "checkStudent") {
+      var checkNama = (params.nama || "").trim().toLowerCase();
+      var checkKelas = (params.kelas || "").trim().toUpperCase();
+
+      if (!checkNama) {
+        return ContentService
+          .createTextOutput(JSON.stringify({ success: true, exists: false }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var checkSheet = getOrCreateSheet();
+      var checkValues = checkSheet.getDataRange().getValues();
+      var found = null;
+
+      for (var k = 1; k < checkValues.length; k++) {
+        var r = checkValues[k];
+        if (String(r[2]).trim().toLowerCase() === checkNama &&
+            String(r[3]).trim().toUpperCase() === checkKelas) {
+          found = {
+            id: r[0],
+            waktu: r[1],
+            nama: r[2],
+            kelas: r[3],
+            skor: Number(r[4]),
+            totalBenar: Number(r[5]),
+            totalSalah: Number(r[6]),
+            status: r[10]
+          };
+          break;
+        }
+      }
+
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: true,
+          exists: !!found,
+          data: found
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Pemeriksaan Keamanan PIN Guru (Untuk Mengakses Seluruh Rekapitulasi Kelas)
     if (pin !== TEACHER_PIN) {
       return ContentService
         .createTextOutput(JSON.stringify({

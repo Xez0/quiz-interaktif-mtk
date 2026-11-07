@@ -52,29 +52,69 @@ class DatabaseManager {
     const cleanKelas = (kelas || '').trim().toUpperCase();
     const key = `${cleanNama}_${cleanKelas}`;
 
-    // Cek di session local storage browser aktif
-    const studentSession = localStorage.getItem(this.STUDENT_COMPLETED_KEY);
-    if (studentSession) {
-      try {
-        const parsed = JSON.parse(studentSession);
-        if (parsed.key === key) {
-          return { submitted: true, data: parsed };
-        }
-      } catch (e) {}
-    }
-
-    // Cek di penyimpanan lokal data
+    // Cek di penyimpanan data (tersinkron 1:1 dengan Google Spreadsheet)
     const all = this.getLocalSubmissions();
     const found = all.find(item => 
-      item.nama.trim().toLowerCase() === cleanNama && 
-      item.kelas.trim().toUpperCase() === cleanKelas
+      (item.nama || '').trim().toLowerCase() === cleanNama && 
+      (item.kelas || '').trim().toUpperCase() === cleanKelas
     );
 
     if (found) {
       return { submitted: true, data: found };
     }
 
+    // Jika data siswa TIDAK ADA di rekapan spreadsheet (karena dihapus guru),
+    // maka bersihkan status kunci lokal agar siswa dapat mengerjakan kembali
+    const studentSession = localStorage.getItem(this.STUDENT_COMPLETED_KEY);
+    if (studentSession) {
+      try {
+        const parsed = JSON.parse(studentSession);
+        if (parsed.key === key) {
+          localStorage.removeItem(this.STUDENT_COMPLETED_KEY);
+        }
+      } catch (e) {}
+    }
+
     return { submitted: false };
+  }
+
+  // Verifikasi status ke Google Spreadsheet secara real-time (asinkron)
+  async checkStudentStatusOnline(nama, kelas) {
+    const cleanNama = (nama || '').trim();
+    const cleanKelas = (kelas || '').trim();
+    if (!cleanNama) return { submitted: false };
+
+    if (this.gasUrl && this.gasUrl.startsWith('https://script.google.com')) {
+      try {
+        const url = `${this.gasUrl}?action=checkStudent&nama=${encodeURIComponent(cleanNama)}&kelas=${encodeURIComponent(cleanKelas)}&_t=${Date.now()}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) {
+            if (!json.exists) {
+              // Guru telah menghapus baris siswa ini di Google Spreadsheet!
+              // Bersihkan status kunci pengerjaan lokal di browser ini
+              const sessionStr = localStorage.getItem(this.STUDENT_COMPLETED_KEY);
+              if (sessionStr) {
+                try {
+                  const parsed = JSON.parse(sessionStr);
+                  if ((parsed.nama || '').trim().toLowerCase() === cleanNama.toLowerCase()) {
+                    localStorage.removeItem(this.STUDENT_COMPLETED_KEY);
+                  }
+                } catch (e) {}
+              }
+              return { submitted: false };
+            } else {
+              return { submitted: true, data: json.data };
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Verifikasi status cloud tertunda, memakai lokal:", e);
+      }
+    }
+
+    return this.isAlreadySubmitted(cleanNama, cleanKelas);
   }
 
   // Tandai bahwa sesi pengerjaan siswa ini telah selesai
@@ -150,22 +190,24 @@ class DatabaseManager {
     return pin === this.TEACHER_PIN;
   }
 
-  // Ambil rekapitulasi data seluruh siswa
+  // Ambil rekapitulasi data seluruh siswa (Live Sync dengan Google Spreadsheet)
   async getTeacherDashboardData(pin) {
     if (!this.verifyTeacherPin(pin)) {
       throw new Error("PIN salah! Akses dasbor guru ditolak.");
     }
 
-    // Jika terhubung ke Google Apps Script, coba tarik data real-time
+    // Jika terhubung ke Google Apps Script, Google Spreadsheet adalah SUMBER KEBENARAN UTAMA (Single Source of Truth)
     if (this.gasUrl && this.gasUrl.startsWith('https://script.google.com')) {
       try {
-        const urlWithPin = `${this.gasUrl}?action=getSummary&pin=${encodeURIComponent(pin)}`;
+        // Parameter _t mencegah browser cache sehingga data selalu mencerminkan isi Google Sheets terkini
+        const urlWithPin = `${this.gasUrl}?action=getSummary&pin=${encodeURIComponent(pin)}&_t=${Date.now()}`;
         const res = await fetch(urlWithPin);
         if (res.ok) {
           const cloudData = await res.json();
           if (cloudData.success && Array.isArray(cloudData.data)) {
-            // Gabungkan atau sinkronkan data cloud ke penyimpanan lokal
-            this.mergeCloudDataToLocal(cloudData.data);
+            // Perbarui penyimpanan lokal agar PERSIS sama dengan Google Spreadsheet
+            // Jika baris di spreadsheet dihapus atau disunting guru, di sini otomatis mengikuti 1:1!
+            this.syncCloudDataToLocal(cloudData.data);
             return cloudData.data;
           }
         }
@@ -174,7 +216,7 @@ class DatabaseManager {
       }
     }
 
-    // Fallback: Ambil dari LocalStorage
+    // Fallback offline
     return this.getLocalSubmissions();
   }
 
@@ -193,7 +235,6 @@ class DatabaseManager {
 
   saveToLocal(newRecord) {
     const current = this.getLocalSubmissions();
-    // Tambahkan id unik jika belum ada
     if (!newRecord.id) {
       newRecord.id = 'SUB-' + Date.now().toString().slice(-6);
     }
@@ -201,26 +242,27 @@ class DatabaseManager {
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(current));
   }
 
-  mergeCloudDataToLocal(cloudList) {
-    const local = this.getLocalSubmissions();
-    const map = new Map();
+  // Sinkronisasi 1:1 Mengikuti Google Spreadsheet (Single Source of Truth)
+  syncCloudDataToLocal(cloudList) {
+    // 1. Gantikan data lokal secara penuh dengan data yang ada di Google Spreadsheet saat ini
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cloudList));
 
-    // Prioritaskan data cloud
-    cloudList.forEach(item => {
-      const key = `${item.nama}_${item.kelas}`;
-      map.set(key, item);
-    });
-
-    // Tambahkan data lokal yang belum ada di cloud
-    local.forEach(item => {
-      const key = `${item.nama}_${item.kelas}`;
-      if (!map.has(key)) {
-        map.set(key, item);
-      }
-    });
-
-    const merged = Array.from(map.values());
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(merged));
+    // 2. Sinkronkan juga status sesi pengerjaan di browser ini:
+    // Jika siswa di browser ini barisnya telah dihapus oleh guru di Google Spreadsheet,
+    // maka batalkan status kunci pengerjaannya sehingga siswa bisa mengerjakan ulang!
+    const sessionStr = localStorage.getItem(this.STUDENT_COMPLETED_KEY);
+    if (sessionStr) {
+      try {
+        const session = JSON.parse(sessionStr);
+        const stillInSheet = cloudList.some(item => 
+          (item.nama || '').trim().toLowerCase() === (session.nama || '').trim().toLowerCase() &&
+          (item.kelas || '').trim().toUpperCase() === (session.kelas || '').trim().toUpperCase()
+        );
+        if (!stillInSheet) {
+          localStorage.removeItem(this.STUDENT_COMPLETED_KEY);
+        }
+      } catch (e) {}
+    }
   }
 
   // Hapus semua data (hanya dari dalam Dasbor Guru setelah konfirmasi)

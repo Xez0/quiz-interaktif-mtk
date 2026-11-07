@@ -32,14 +32,6 @@ class QuizApp {
     this.teacherSearchQuery = '';
     this.teacherData = [];
 
-    // Reset via URL param jika diminta (?reset=0123 atau ?reset=true)
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('reset') === '0123' || urlParams.get('reset') === 'true') {
-      window.dbManager.clearAllData('0123');
-      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
-    }
-
     this.initDOM();
     this.bindEvents();
     this.checkReturningStudent();
@@ -123,7 +115,7 @@ class QuizApp {
     this.teacherSearchInput = document.getElementById('teacher-search-input');
     this.teacherClassTabs = document.querySelectorAll('.class-tab-btn');
     this.btnExitTeacher = document.getElementById('btn-exit-teacher');
-    this.btnClearAllData = document.getElementById('btn-clear-all-data');
+    this.btnRefreshTeacher = document.getElementById('btn-refresh-teacher');
 
     // Export Buttons
     this.btnExportExcel = document.getElementById('btn-export-excel');
@@ -230,33 +222,19 @@ class QuizApp {
       window.exportEngine.exportToWord(filtered, this.teacherClassFilter);
     });
 
-    // Reset Semua Data Ujian (Dasbor Guru)
-    if (this.btnClearAllData) {
-      this.btnClearAllData.addEventListener('click', async () => {
+    // Segarkan Data Dasbor Guru (Sinkronisasi Live Langsung dari Google Spreadsheet)
+    if (this.btnRefreshTeacher) {
+      this.btnRefreshTeacher.addEventListener('click', async () => {
         window.audioEngine.playClick();
-        const confirmed = confirm(
-          "⚠️ PERINGATAN GURU:\nApakah Bapak/Ibu yakin ingin menghapus SELURUH rekaman nilai ujian?\n\n" +
-          "• Tabel di dasbor akan dikosongkan (0 siswa).\n" +
-          "• Catatan pengerjaan sebelumnya di perangkat ini akan dibersihkan sehingga bisa mengerjakan ulang jika diperlukan.\n" +
-          "• Perintah reset akan dikirimkan ke cloud Google Sheets."
-        );
-        if (!confirmed) return;
+        const origText = this.btnRefreshTeacher.innerText;
+        this.btnRefreshTeacher.innerText = '⏳ Menyinkronkan...';
+        this.btnRefreshTeacher.disabled = true;
 
         try {
-          await window.dbManager.clearAllData('0123');
-          this.teacherData = [];
-          this.renderTeacherTable();
-          this.renderTeacherStats();
-          if (this.alreadyNotice) {
-            this.alreadyNotice.classList.add('hidden');
-          }
-          if (this.btnStartQuiz) {
-            this.btnStartQuiz.disabled = false;
-            this.btnStartQuiz.classList.remove('hidden');
-          }
-          alert("✅ Semua data ujian sebelumnya berhasil dibersihkan!");
-        } catch (err) {
-          alert("Gagal mereset data: " + err.message);
+          await this.refreshTeacherData();
+        } finally {
+          this.btnRefreshTeacher.innerText = origText;
+          this.btnRefreshTeacher.disabled = false;
         }
       });
     }
@@ -333,8 +311,22 @@ class QuizApp {
       try {
         const session = JSON.parse(sessionStr);
         if (session && session.nama && session.skor !== undefined) {
-          this.renderResultScreen(session);
-          return;
+          // Periksa apakah siswa ini masih ada di data rekapan spreadsheet
+          const all = window.dbManager.getLocalSubmissions();
+          const cleanNama = (session.nama || '').trim().toLowerCase();
+          const cleanKelas = (session.kelas || '').trim().toUpperCase();
+          const stillInSheet = all.some(item => 
+            (item.nama || '').trim().toLowerCase() === cleanNama &&
+            (item.kelas || '').trim().toUpperCase() === cleanKelas
+          );
+
+          if (stillInSheet) {
+            this.renderResultScreen(session);
+            return;
+          } else {
+            // Data telah dihapus oleh guru di spreadsheet, bersihkan kunci lokal
+            localStorage.removeItem(window.dbManager.STUDENT_COMPLETED_KEY);
+          }
         }
       } catch (e) {}
     }
@@ -409,7 +401,7 @@ class QuizApp {
     localStorage.setItem('quiz_in_progress_state', JSON.stringify(progress));
   }
 
-  checkStudentSubmissionEligibility() {
+  async checkStudentSubmissionEligibility() {
     const nama = this.studentNameInput.value.trim();
     const kelas = this.studentClassSelect.value;
     if (!nama) {
@@ -418,8 +410,21 @@ class QuizApp {
       return;
     }
 
+    // 1. Cek instan di data lokal
     const check = window.dbManager.isAlreadySubmitted(nama, kelas);
-    if (check.submitted) {
+    this.updateEligibilityUI(check);
+
+    // 2. Verifikasi live langsung ke Google Spreadsheet (jika data baru saja dihapus oleh guru di spreadsheet)
+    try {
+      const liveCheck = await window.dbManager.checkStudentStatusOnline(nama, kelas);
+      if (this.studentNameInput.value.trim() === nama && this.studentClassSelect.value === kelas) {
+        this.updateEligibilityUI(liveCheck);
+      }
+    } catch (e) {}
+  }
+
+  updateEligibilityUI(check) {
+    if (check && check.submitted && check.data) {
       this.alreadyNotice.innerHTML = `
         <div class="alert-box alert-warning">
           <strong>⚠️ Kamu Sudah Mengerjakan!</strong><br/>
