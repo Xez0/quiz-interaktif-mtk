@@ -333,7 +333,14 @@ class QuizApp {
         this.streakCount = prog.streakCount || 0;
         this.answersHistory = prog.answersHistory || [];
         this.startTime = prog.startTime ? new Date(prog.startTime) : new Date();
-        this.setupQuestionQueue();
+
+        // Pulihkan susunan acak opsi yang sebelumnya telah diacak untuk siswa ini
+        if (prog.questionQueue && prog.questionQueue.length === 50) {
+          this.questionQueue = prog.questionQueue;
+        } else {
+          this.setupQuestionQueue();
+        }
+
         this.showScreen('quiz');
         this.loadQuestionAtCurrentIndex();
       });
@@ -350,6 +357,7 @@ class QuizApp {
       currentDifficulty: this.currentDifficulty,
       streakCount: this.streakCount,
       answersHistory: this.answersHistory,
+      questionQueue: this.questionQueue, // Simpan urutan acak opsi milik siswa ini
       startTime: this.startTime,
       updatedAt: Date.now()
     };
@@ -451,7 +459,27 @@ class QuizApp {
 
   setupQuestionQueue() {
     // 50 Soal Matematika Lengkap Bab 1, 2, dan 3 Sesuai Kurikulum Merdeka
-    this.questionQueue = [...QUIZ_DATA];
+    // Fitur Anti-Nyontek: Posisi pilihan jawaban diacak secara dinamis per sesi siswa
+    // Huruf A, B, C, D tetap berurutan, namun teks jawaban diacak posisinya sehingga siswa sebangku tidak bisa saling contek
+    this.questionQueue = QUIZ_DATA.map(q => {
+      const correctText = q.options[q.answer];
+      const shuffled = [...q.options];
+
+      // Algoritma Fisher-Yates Shuffle untuk mengacak opsi jawaban
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
+      // Kunci jawaban secara otomatis melacak indeks posisi baru
+      const newAnswerIndex = shuffled.indexOf(correctText);
+
+      return {
+        ...q,
+        options: shuffled,
+        answer: newAnswerIndex
+      };
+    });
   }
 
   loadQuestionAtCurrentIndex() {
