@@ -150,6 +150,27 @@
     </section>
 
     <!-- ==========================================
+         LAYAR LOADING: MENGHITUNG SKOR & SINKRONISASI
+         ========================================== -->
+    <section id="calculating-screen" class="game-card hidden" style="text-align: center; padding: 48px 20px;">
+      <div class="hero-mascot" style="font-size: 4rem; animation: floatMascot 1s ease-in-out infinite;">🧮</div>
+      <h2 style="font-family: var(--font-heading); color: var(--sky-600); margin: 16px 0 6px; font-size: 1.8rem;">
+        Menghitung Skor Petualanganmu...
+      </h2>
+      <p style="color: var(--slate-600); font-size: 1.05rem; margin-bottom: 24px;">
+        Hebat! Kamu telah menyelesaikan 50 soal. Sedang merekap jawaban dan mengirim nilai ke Guru ✨
+      </p>
+      <div style="max-width: 360px; margin: 0 auto;">
+        <div class="progress-track" style="height: 18px; border-width: 2px;">
+          <div id="calc-progress-fill" class="progress-fill" style="width: 20%; transition: width 0.4s ease;"></div>
+        </div>
+        <p id="calc-status-text" style="font-size: 0.9rem; color: var(--slate-500); margin-top: 12px; font-weight: 700;">
+          Merekap capaian Bab 1, 2, dan 3...
+        </p>
+      </div>
+    </section>
+
+    <!-- ==========================================
          LAYAR 3: HASIL NILAI SISWA
          ========================================== -->
     <section id="result-screen" class="game-card hidden">

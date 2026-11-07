@@ -43,9 +43,14 @@ class QuizApp {
     this.screens = {
       welcome: document.getElementById('welcome-screen'),
       quiz: document.getElementById('quiz-screen'),
+      calculating: document.getElementById('calculating-screen'),
       result: document.getElementById('result-screen'),
       teacher: document.getElementById('teacher-screen')
     };
+
+    // Calculating Elements
+    this.calcProgressFill = document.getElementById('calc-progress-fill');
+    this.calcStatusText = document.getElementById('calc-status-text');
 
     // Audio Buttons
     this.btnToggleSFX = document.getElementById('btn-toggle-sfx');
@@ -691,7 +696,11 @@ class QuizApp {
 
   async finishQuiz() {
     window.audioEngine.stopSpeaking();
-    window.audioEngine.playVictory();
+
+    // 1. Tampilkan Segera Layar Animasi Menghitung (Menghilangkan kesan delay/hang)
+    this.showScreen('calculating');
+    if (this.calcProgressFill) this.calcProgressFill.style.width = '25%';
+    if (this.calcStatusText) this.calcStatusText.innerText = 'Merekap hasil jawaban Bab 1, 2, dan 3...';
 
     const totalQuestions = this.answersHistory.length;
     const correctCount = this.answersHistory.filter(a => a.isCorrect).length;
@@ -725,23 +734,30 @@ class QuizApp {
       status: finalScore >= 75 ? 'Tuntas' : 'Perlu Bimbingan'
     };
 
-    // Tembak ke Database (Google Apps Script + LocalStorage)
-    await window.dbManager.submitQuizResult(submissionData);
+    // Update progres animasi secara bertahap
+    setTimeout(() => {
+      if (this.calcProgressFill) this.calcProgressFill.style.width = '70%';
+      if (this.calcStatusText) this.calcStatusText.innerText = 'Menyimpan nilai ke Google Sheets Guru...';
+    }, 400);
+
+    // Kirim ke database cloud secara paralel bersamaan dengan animasi
+    const dbPromise = window.dbManager.submitQuizResult(submissionData);
+    const minAnimPromise = new Promise(resolve => setTimeout(resolve, 1200));
+
+    // Tunggu sinkronisasi dan durasi animasi minimal selesai
+    await Promise.all([dbPromise, minAnimPromise]);
+
+    if (this.calcProgressFill) this.calcProgressFill.style.width = '100%';
+    if (this.calcStatusText) this.calcStatusText.innerText = 'Selesai! Menyiapkan kartu nilaimu...';
 
     // Hapus penyimpanan sementara in-progress karena pengerjaan telah selesai resmi
     localStorage.removeItem('quiz_in_progress_state');
 
-    // Render Layar Hasil
-    this.renderResultScreen(submissionData);
-
-    // Confetti jika tuntas
-    if (finalScore >= 75 && typeof confetti === 'function') {
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-    }
+    // Transisi halus ke Layar Hasil
+    setTimeout(() => {
+      window.audioEngine.playVictory();
+      this.renderResultScreen(submissionData);
+    }, 350);
   }
 
   calculateBabScores() {
@@ -767,10 +783,37 @@ class QuizApp {
     return res;
   }
 
+  animateScoreCounter(targetScore) {
+    const el = this.resultScoreNumber;
+    el.innerText = '0';
+    const duration = 1100;
+    const start = performance.now();
+
+    const frame = (time) => {
+      const progress = Math.min((time - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.innerText = Math.round(ease * targetScore);
+
+      if (progress < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        el.innerText = targetScore;
+        if (targetScore >= 75 && typeof confetti === 'function') {
+          confetti({
+            particleCount: 120,
+            spread: 80,
+            origin: { y: 0.58 }
+          });
+        }
+      }
+    };
+    requestAnimationFrame(frame);
+  }
+
   renderResultScreen(data) {
     this.showScreen('result');
     this.resultStudentName.innerText = `${data.nama} (${data.kelas})`;
-    this.resultScoreNumber.innerText = data.skor;
+    this.animateScoreCounter(Number(data.skor) || 0);
     this.resultCorrectCount.innerText = data.totalBenar;
     this.resultWrongCount.innerText = data.totalSalah;
 
