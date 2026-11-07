@@ -26,92 +26,9 @@ class DatabaseManager {
     this.seedInitialLocalData();
   }
 
-  // Isi data simulasi untuk demo awal jika belum ada data
+  // Inisialisasi data: mulai murni kosong tanpa data palsu/dummy
   seedInitialLocalData() {
-    const existing = localStorage.getItem(this.STORAGE_KEY);
-    if (!existing) {
-      const sampleData = [
-        {
-          id: 'SUB-101',
-          nama: 'Budi Santoso',
-          kelas: '3A',
-          skor: 92,
-          totalBenar: 18,
-          totalSalah: 2,
-          bab1Skor: 95,
-          bab2Skor: 90,
-          bab3Skor: 90,
-          waktu: '07/11/2026, 08:30:15',
-          status: 'Tuntas'
-        },
-        {
-          id: 'SUB-102',
-          nama: 'Siti Rahma',
-          kelas: '3A',
-          skor: 88,
-          totalBenar: 17,
-          totalSalah: 3,
-          bab1Skor: 90,
-          bab2Skor: 85,
-          bab3Skor: 90,
-          waktu: '07/11/2026, 08:45:20',
-          status: 'Tuntas'
-        },
-        {
-          id: 'SUB-103',
-          nama: 'Aditya Pratama',
-          kelas: '3B',
-          skor: 95,
-          totalBenar: 19,
-          totalSalah: 1,
-          bab1Skor: 100,
-          bab2Skor: 95,
-          bab3Skor: 90,
-          waktu: '07/11/2026, 09:10:05',
-          status: 'Tuntas'
-        },
-        {
-          id: 'SUB-104',
-          nama: 'Zahra Amelia',
-          kelas: '3B',
-          skor: 68,
-          totalBenar: 13,
-          totalSalah: 7,
-          bab1Skor: 75,
-          bab2Skor: 60,
-          bab3Skor: 70,
-          waktu: '07/11/2026, 09:25:40',
-          status: 'Perlu Bimbingan'
-        },
-        {
-          id: 'SUB-105',
-          nama: 'Muhammad Rizky',
-          kelas: '3C',
-          skor: 85,
-          totalBenar: 16,
-          totalSalah: 4,
-          bab1Skor: 85,
-          bab2Skor: 80,
-          bab3Skor: 90,
-          waktu: '07/11/2026, 10:05:12',
-          status: 'Tuntas'
-        },
-        {
-          id: 'SUB-106',
-          nama: 'Dewi Lestari',
-          kelas: '3D',
-          skor: 78,
-          totalBenar: 15,
-          totalSalah: 5,
-          bab1Skor: 80,
-          bab2Skor: 75,
-          bab3Skor: 80,
-          waktu: '07/11/2026, 10:40:22',
-          status: 'Tuntas'
-        }
-      ];
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sampleData));
-    }
+    // Kosong: tidak menyuntikkan data palsu agar data di dasbor selalu murni hasil pengerjaan siswa
   }
 
   // Ambil URL Google Apps Script yang tersimpan
@@ -307,12 +224,26 @@ class DatabaseManager {
   }
 
   // Hapus semua data (hanya dari dalam Dasbor Guru setelah konfirmasi)
-  clearAllData(pin) {
+  async clearAllData(pin) {
     if (!this.verifyTeacherPin(pin)) {
-      throw new Error("PIN salah!");
+      throw new Error("PIN salah! Hanya guru yang memiliki hak akses.");
     }
+
+    // 1. Bersihkan seluruh penyimpanan lokal browser
     localStorage.removeItem(this.STORAGE_KEY);
     localStorage.removeItem(this.STUDENT_COMPLETED_KEY);
+    localStorage.removeItem('quiz_in_progress_state');
+
+    // 2. Jika terhubung ke Google Apps Script, panggil API reset cloud
+    if (this.gasUrl && this.gasUrl.startsWith('https://script.google.com')) {
+      try {
+        const resetUrl = `${this.gasUrl}?action=clearData&pin=${encodeURIComponent(pin)}`;
+        await fetch(resetUrl, { mode: 'no-cors' });
+      } catch (err) {
+        console.warn("Panggilan reset cloud GAS:", err);
+      }
+    }
+
     return true;
   }
 }

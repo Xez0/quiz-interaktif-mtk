@@ -32,6 +32,14 @@ class QuizApp {
     this.teacherSearchQuery = '';
     this.teacherData = [];
 
+    // Reset via URL param jika diminta (?reset=0123 atau ?reset=true)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('reset') === '0123' || urlParams.get('reset') === 'true') {
+      window.dbManager.clearAllData('0123');
+      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    }
+
     this.initDOM();
     this.bindEvents();
     this.checkReturningStudent();
@@ -115,6 +123,7 @@ class QuizApp {
     this.teacherSearchInput = document.getElementById('teacher-search-input');
     this.teacherClassTabs = document.querySelectorAll('.class-tab-btn');
     this.btnExitTeacher = document.getElementById('btn-exit-teacher');
+    this.btnClearAllData = document.getElementById('btn-clear-all-data');
 
     // Export Buttons
     this.btnExportExcel = document.getElementById('btn-export-excel');
@@ -220,6 +229,37 @@ class QuizApp {
       const filtered = this.getFilteredTeacherData();
       window.exportEngine.exportToWord(filtered, this.teacherClassFilter);
     });
+
+    // Reset Semua Data Ujian (Dasbor Guru)
+    if (this.btnClearAllData) {
+      this.btnClearAllData.addEventListener('click', async () => {
+        window.audioEngine.playClick();
+        const confirmed = confirm(
+          "⚠️ PERINGATAN GURU:\nApakah Bapak/Ibu yakin ingin menghapus SELURUH rekaman nilai ujian?\n\n" +
+          "• Tabel di dasbor akan dikosongkan (0 siswa).\n" +
+          "• Catatan pengerjaan sebelumnya di perangkat ini akan dibersihkan sehingga bisa mengerjakan ulang jika diperlukan.\n" +
+          "• Perintah reset akan dikirimkan ke cloud Google Sheets."
+        );
+        if (!confirmed) return;
+
+        try {
+          await window.dbManager.clearAllData('0123');
+          this.teacherData = [];
+          this.renderTeacherTable();
+          this.renderTeacherStats();
+          if (this.alreadyNotice) {
+            this.alreadyNotice.classList.add('hidden');
+          }
+          if (this.btnStartQuiz) {
+            this.btnStartQuiz.disabled = false;
+            this.btnStartQuiz.classList.remove('hidden');
+          }
+          alert("✅ Semua data ujian sebelumnya berhasil dibersihkan!");
+        } catch (err) {
+          alert("Gagal mereset data: " + err.message);
+        }
+      });
+    }
 
     // GAS Settings Modal
     this.btnOpenGasSettings.addEventListener('click', () => {

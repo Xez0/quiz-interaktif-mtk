@@ -26,6 +26,31 @@ function doPost(e) {
     var rawData = e.postData.contents;
     var data = JSON.parse(rawData);
 
+    // Fitur Reset / Hapus Seluruh Data Ujian (Hanya dengan PIN Guru)
+    if (data.action === "clearData" || data.action === "reset") {
+      if (data.pin !== TEACHER_PIN) {
+        return ContentService
+          .createTextOutput(JSON.stringify({
+            success: false,
+            error: "Akses ditolak: PIN Guru salah!"
+          }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      var clearSheet = getOrCreateSheet();
+      var lastRow = clearSheet.getLastRow();
+      if (lastRow > 1) {
+        clearSheet.deleteRows(2, lastRow - 1);
+      }
+
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: true,
+          message: "Seluruh baris data rekap ujian berhasil dibersihkan."
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     var sheet = getOrCreateSheet();
     var submissionId = "SUB-" + new Date().getTime().toString().slice(-6);
     var timestamp = data.waktu || new Date().toLocaleString("id-ID");
@@ -89,6 +114,21 @@ function doGet(e) {
         .createTextOutput(JSON.stringify({
           success: false,
           error: "Akses ditolak: PIN Guru salah atau tidak disertakan!"
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Aksi 1: Hapus / Reset Semua Rekap Nilai Siswa
+    if (action === "clearData" || action === "reset") {
+      var sheetToClear = getOrCreateSheet();
+      var lastRow = sheetToClear.getLastRow();
+      if (lastRow > 1) {
+        sheetToClear.deleteRows(2, lastRow - 1);
+      }
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: true,
+          message: "Seluruh data nilai di Google Spreadsheet berhasil dihapus."
         }))
         .setMimeType(ContentService.MimeType.JSON);
     }
