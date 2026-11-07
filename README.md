@@ -118,3 +118,4 @@ quiz-interaktif-mtk/
 
 ## 📜 Lisensi & Hak Cipta
 Dibuat untuk keperluan pendidikan dan asesmen formatif sekolah dasar. Bebas dikembangkan dan dimodifikasi untuk kemajuan pendidikan anak Indonesia.
+

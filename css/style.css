@@ -61,6 +61,10 @@
   padding: 0;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--font-body);
   color: var(--slate-800);
@@ -70,6 +74,7 @@ body {
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
   padding-bottom: 40px;
+  overflow-x: hidden;
 }
 
 .container {
@@ -1113,12 +1118,391 @@ body {
   color: var(--coral-600);
 }
 
-/* Responsivitas Layar Kecil */
-@media (max-width: 640px) {
-  .welcome-hero h1 { font-size: 1.8rem; }
-  .question-title { font-size: 1.15rem; padding-right: 0; }
-  .btn-listen { position: static; margin-bottom: 12px; }
-  .game-card { padding: 18px; }
-  .teacher-stats-grid { grid-template-columns: 1fr 1fr; }
-  .search-box { width: 100%; }
+/* ========================================================
+   AUDIT & RESPONSIVITAS E2E (DARI 300px HINGGA PC/LAPTOP)
+   ======================================================== */
+
+/* Pastikan Tabel Memiliki Minimum Width Agar Bisa Di-scroll Horizontal Halus di Mobile */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--slate-200);
+  background: white;
+  margin-top: 10px;
 }
+
+.data-table {
+  min-width: 680px;
+}
+
+/* 1. TABLET & LAYAR MENENGAH (<= 768px) */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 14px;
+  }
+
+  .game-card {
+    padding: 22px;
+    margin-top: 16px;
+    border-radius: var(--radius-md);
+  }
+
+  .teacher-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .export-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .export-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .export-btn-group .btn-chunky {
+    flex: 1 1 calc(33.333% - 8px);
+    min-width: 140px;
+  }
+
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  .class-tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* 2. SMARTPHONE STANDAR (<= 640px) */
+@media (max-width: 640px) {
+  .top-nav {
+    padding: 10px 0;
+  }
+
+  .nav-content {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .brand-badge {
+    font-size: 1rem;
+  }
+
+  .nav-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .btn-pill-control {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+  }
+
+  .welcome-hero h1 {
+    font-size: 1.7rem;
+    line-height: 1.25;
+  }
+
+  .welcome-hero p {
+    font-size: 0.95rem;
+  }
+
+  .hero-mascot {
+    font-size: 3.2rem;
+  }
+
+  .game-card {
+    padding: 18px 16px;
+  }
+
+  /* Kuis Screen */
+  .quiz-header {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .quiz-top-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .badge-bab {
+    text-align: center;
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+
+  .question-box {
+    padding: 18px 16px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .btn-listen {
+    position: static;
+    margin-bottom: 12px;
+    align-self: flex-start;
+    width: 100%;
+    justify-content: center;
+    min-height: 42px;
+  }
+
+  .question-title {
+    font-size: 1.15rem;
+    padding-right: 0 !important;
+    line-height: 1.45;
+  }
+
+  .options-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .option-card {
+    padding: 14px 16px;
+    min-height: 58px;
+    gap: 12px;
+  }
+
+  .option-letter {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
+
+  .option-text {
+    font-size: 1.02rem;
+  }
+
+  /* Teacher Dashboard */
+  .teacher-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .teacher-header-actions {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .teacher-header-actions .btn-chunky,
+  .teacher-header-actions .btn-pill-control {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .teacher-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .export-btn-group .btn-chunky {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  /* Modals */
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal-content {
+    padding: 20px 16px;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+
+  .feedback-title {
+    font-size: 1.35rem;
+  }
+
+  .feedback-icon {
+    font-size: 2.8rem;
+  }
+}
+
+/* 3. SMARTPHONE COMPACT (<= 480px) */
+@media (max-width: 480px) {
+  .container {
+    padding: 0 10px;
+  }
+
+  .game-card {
+    padding: 16px 12px;
+    border-radius: var(--radius-md);
+  }
+
+  .btn-chunky {
+    font-size: 0.98rem;
+    padding: 10px 16px;
+    min-height: 48px;
+  }
+
+  .welcome-hero h1 {
+    font-size: 1.5rem;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .feature-item {
+    padding: 10px;
+  }
+
+  .feature-item .icon {
+    font-size: 1.5rem;
+  }
+
+  /* Top Bar Kontrol */
+  .nav-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .btn-pill-control {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+    font-size: 0.74rem;
+    padding: 6px 4px;
+    gap: 2px;
+  }
+
+  /* Result Screen */
+  .result-score-circle {
+    width: 110px;
+    height: 110px;
+    border-width: 4px;
+    margin: 12px auto;
+  }
+
+  .score-num {
+    font-size: 2.6rem;
+  }
+
+  .summary-num {
+    font-size: 1.6rem;
+  }
+
+  .summary-label {
+    font-size: 0.78rem;
+  }
+
+  /* Pin Keypad */
+  .pin-keypad {
+    gap: 8px;
+  }
+
+  .pin-key {
+    padding: 10px 4px;
+    font-size: 1.25rem;
+    min-height: 44px;
+  }
+}
+
+/* 4. ULTRA-COMPACT MOBILE (300px - 360px: e.g. Galaxy Z Fold Outer, iPhone SE 1st Gen) */
+@media (max-width: 360px) {
+  .container {
+    padding: 0 6px;
+  }
+
+  .game-card {
+    padding: 14px 10px;
+  }
+
+  .brand-badge {
+    font-size: 0.88rem;
+  }
+
+  .brand-icon {
+    font-size: 1.2rem;
+  }
+
+  .btn-pill-control {
+    font-size: 0.68rem;
+    padding: 4px 2px;
+  }
+
+  .welcome-hero h1 {
+    font-size: 1.35rem;
+  }
+
+  .welcome-hero p {
+    font-size: 0.85rem;
+  }
+
+  .question-title {
+    font-size: 1.05rem;
+  }
+
+  .option-card {
+    padding: 10px 12px;
+    gap: 8px;
+    min-height: 52px;
+  }
+
+  .option-letter {
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+
+  .option-text {
+    font-size: 0.92rem;
+  }
+
+  .teacher-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .stat-box {
+    padding: 8px;
+  }
+
+  .stat-val {
+    font-size: 1.5rem;
+  }
+
+  .stat-title {
+    font-size: 0.72rem;
+  }
+
+  .pin-keypad {
+    gap: 6px;
+  }
+
+  .pin-key {
+    padding: 8px 2px;
+    font-size: 1.15rem;
+  }
+
+  .modal-content {
+    padding: 14px 10px;
+  }
+}
+

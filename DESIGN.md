@@ -98,3 +98,4 @@ Menggunakan kombinasi font Google Fonts yang terbaca jelas dan berkarakter ramah
 - Berbasis Flexbox dan CSS Grid modern.
 - Target sentuh minimal: `48px x 48px` untuk setiap elemen interaktif.
 - Mendukung layar ponsel (360px - 480px), tablet (768px - 1024px), dan layar proyektor / laptop kelas (1200px+).
+
