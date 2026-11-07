@@ -275,20 +275,85 @@ class QuizApp {
   }
 
   // ==========================================
-  // ATURAN 1X PENGERJAAN & CEK SISWA
+  // ATURAN 1X PENGERJAAN & CEK SISWA (RESUME / PERMANENT LOCK)
   // ==========================================
 
   checkReturningStudent() {
     this.updateAudioIcons();
+
+    // 1. Prioritas Utama: Jika siswa sudah pernah menyelesaikan kuis (SUBMITTED)
+    // Siswa TIDAK PERNAH bisa mengulang lagi, langsung kunci ke layar hasil miliknya
     const sessionStr = localStorage.getItem(window.dbManager.STUDENT_COMPLETED_KEY);
     if (sessionStr) {
       try {
         const session = JSON.parse(sessionStr);
         if (session && session.nama && session.skor !== undefined) {
-          this.displayPreviousResultNotice(session);
+          this.renderResultScreen(session);
+          return;
         }
       } catch (e) {}
     }
+
+    // 2. Jika belum submit, cek apakah kuis sedang berjalan lalu tertutup / crash (AUTO-RECOVERY)
+    const inProgressStr = localStorage.getItem('quiz_in_progress_state');
+    if (inProgressStr) {
+      try {
+        const prog = JSON.parse(inProgressStr);
+        if (prog && prog.student && prog.student.nama && prog.currentIndex < 50) {
+          this.showResumeNotice(prog);
+          return;
+        }
+      } catch (e) {}
+    }
+  }
+
+  showResumeNotice(prog) {
+    this.alreadyNotice.innerHTML = `
+      <div class="alert-box alert-info" style="border: 2px solid #38bdf8; background: #e0f2fe;">
+        <strong style="font-size: 1.1rem; color: #0284c7;">🔄 Lanjutkan Kuis Terakhirmu!</strong><br/>
+        Halo <b>${prog.student.nama}</b> (${prog.student.kelas}), sistem mendeteksi kamu sedang mengerjakan kuis dan belum selesai.<br/>
+        Terakhir di <b>Soal ke-${prog.currentIndex + 1} dari 50</b>.<br/>
+        <div style="margin-top: 14px;">
+          <button type="button" class="btn-chunky btn-primary btn-block" id="btn-resume-quiz">
+            Lanjutkan Soal ke-${prog.currentIndex + 1} 🚀
+          </button>
+        </div>
+      </div>
+    `;
+    this.alreadyNotice.classList.remove('hidden');
+    this.btnStartQuiz.classList.add('hidden');
+
+    const btnResume = document.getElementById('btn-resume-quiz');
+    if (btnResume) {
+      btnResume.addEventListener('click', () => {
+        window.audioEngine.playClick();
+        this.currentStudent = prog.student;
+        this.currentIndex = prog.currentIndex;
+        this.currentDifficulty = prog.currentDifficulty || 'easy';
+        this.streakCount = prog.streakCount || 0;
+        this.answersHistory = prog.answersHistory || [];
+        this.startTime = prog.startTime ? new Date(prog.startTime) : new Date();
+        this.setupQuestionQueue();
+        this.showScreen('quiz');
+        this.loadQuestionAtCurrentIndex();
+      });
+    }
+  }
+
+  saveProgress() {
+    if (!this.currentStudent || !this.currentStudent.nama) return;
+    if (this.currentIndex >= 50) return;
+
+    const progress = {
+      student: this.currentStudent,
+      currentIndex: this.currentIndex,
+      currentDifficulty: this.currentDifficulty,
+      streakCount: this.streakCount,
+      answersHistory: this.answersHistory,
+      startTime: this.startTime,
+      updatedAt: Date.now()
+    };
+    localStorage.setItem('quiz_in_progress_state', JSON.stringify(progress));
   }
 
   checkStudentSubmissionEligibility() {
@@ -423,6 +488,9 @@ class QuizApp {
     // Render Opsi Jawaban
     this.renderOptions(this.currentQuestion.options);
 
+    // Simpan progres ke LocalStorage (proteksi crash / reload)
+    this.saveProgress();
+
     // Audio Narasi Otomatis (jika aktif)
     if (window.audioEngine.narrationEnabled) {
       this.readCurrentQuestionAloud();
@@ -505,6 +573,9 @@ class QuizApp {
       correctIndex: this.currentQuestion.answer,
       isCorrect
     });
+
+    // Simpan progres terkini
+    this.saveProgress();
 
     // Logika Adaptif & Audio
     if (isCorrect) {
@@ -628,6 +699,9 @@ class QuizApp {
 
     // Tembak ke Database (Google Apps Script + LocalStorage)
     await window.dbManager.submitQuizResult(submissionData);
+
+    // Hapus penyimpanan sementara in-progress karena pengerjaan telah selesai resmi
+    localStorage.removeItem('quiz_in_progress_state');
 
     // Render Layar Hasil
     this.renderResultScreen(submissionData);
