@@ -737,7 +737,7 @@ class QuizApp {
     // Update progres animasi secara bertahap
     setTimeout(() => {
       if (this.calcProgressFill) this.calcProgressFill.style.width = '70%';
-      if (this.calcStatusText) this.calcStatusText.innerText = 'Menyimpan nilai ke Google Sheets Guru...';
+      if (this.calcStatusText) this.calcStatusText.innerText = 'Menyimpan catatan hasil belajarmu...';
     }, 400);
 
     // Kirim ke database cloud secara paralel bersamaan dengan animasi
