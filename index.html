@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Petualangan Kuis Matematika Ceria - Kelas 3 SD</title>
+  <meta name="description" content="Aplikasi kuis interaktif matematika Bab 1, 2, dan 3 untuk siswa kelas 3 SD semester ganjil kurikulum merdeka dengan sistem adaptif, audio narasi, dan dasbor guru.">
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Library Eksternal untuk Ekspor Laporan & Confetti -->
+  <!-- 1. SheetJS untuk Ekspor Excel (.xlsx) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- 2. jsPDF untuk Ekspor PDF (.pdf) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- 3. jsPDF AutoTable untuk Tabel PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <!-- 4. Canvas Confetti untuk Animasi Kemenangan -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+  <!-- ==========================================
+       NAVIGASI ATAS & KONTROL AUDIO
+       ========================================== -->
+  <header class="top-nav">
+    <div class="container nav-content">
+      <div class="brand-badge">
+        <span class="brand-icon">🧮</span>
+        <span>Matematika Ceria 3 SD</span>
+      </div>
+      <div class="nav-controls">
+        <button type="button" class="btn-pill-control active" id="btn-toggle-sfx" title="Hidupkan/Matikan Efek Suara">
+          🔊 Efek: ON
+        </button>
+        <button type="button" class="btn-pill-control active" id="btn-toggle-narration" title="Hidupkan/Matikan Pembaca Soal Otomatis">
+          🗣️ Narasi: ON
+        </button>
+        <button type="button" class="btn-pill-control btn-teacher-lock" id="btn-open-teacher-modal" title="Khusus Guru (PIN 0123)">
+          🔒 Guru
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- ==========================================
+         LAYAR 1: BERANDA & FORM IDENTITAS SISWA
+         ========================================== -->
+    <section id="welcome-screen" class="game-card">
+      <div class="welcome-hero">
+        <div class="hero-mascot">🦁</div>
+        <h1>Petualangan Matematika</h1>
+        <p>Kuis Interaktif Semester Ganjil • Kelas 3 SD (3A - 3D)</p>
+        <span class="badge-curriculum">📘 Kurikulum Merdeka: Bab 1, 2, dan 3</span>
+      </div>
+
+      <!-- Notifikasi Jika Siswa Sudah Pernah Mengerjakan -->
+      <div id="already-notice" class="hidden"></div>
+
+      <div style="max-width: 560px; margin: 24px auto 0;">
+        <div class="form-group">
+          <label for="student-name">Nama Lengkap Siswa:</label>
+          <input type="text" id="student-name" class="form-input" placeholder="Ketik nama lengkapmu di sini..." autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label for="student-class">Pilih Kelas:</label>
+          <select id="student-class" class="form-select">
+            <option value="3A">Kelas 3 A</option>
+            <option value="3B">Kelas 3 B</option>
+            <option value="3C">Kelas 3 C</option>
+            <option value="3D">Kelas 3 D</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="quiz-mode">Pilihan Petualangan:</label>
+          <select id="quiz-mode" class="form-select">
+            <option value="adaptive">🌟 Petualangan Adaptif (20 Soal Pilihan Cerdas - Sesuai Kemampuanmu)</option>
+            <option value="complete">📚 Jelajah Lengkap (50 Soal Penuh Bab 1, 2, dan 3)</option>
+          </select>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-item">
+            <div class="icon">🎧</div>
+            <h4>Audio Interaktif</h4>
+            <p>Dengarkan suara narasi pembaca soal otomatis</p>
+          </div>
+          <div class="feature-item">
+            <div class="icon">📈</div>
+            <h4>Tingkat Adaptif</h4>
+            <p>Kesulitan soal menyesuaikan capaian belajarmu</p>
+          </div>
+          <div class="feature-item">
+            <div class="icon">💡</div>
+            <h4>Umpan Balik Edukatif</h4>
+            <p>Apresiasi motivasi dan pembahasan langkah benar</p>
+          </div>
+        </div>
+
+        <button type="button" id="btn-start-quiz" class="btn-chunky btn-primary btn-block">
+          Mulai Petualangan Kuis 🚀
+        </button>
+
+        <p style="text-align: center; margin-top: 14px; font-size: 0.85rem; color: #64748b;">
+          ⚠️ <i>Catatan: Setiap siswa hanya dapat mengerjakan kuis 1 kali. Pastikan membaca soal dengan teliti ya!</i>
+        </p>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         LAYAR 2: KUIS INTERAKTIF
+         ========================================== -->
+    <section id="quiz-screen" class="game-card hidden">
+      <div class="quiz-header">
+        <div class="quiz-top-bar">
+          <span id="badge-bab" class="badge-bab">Bab 1: Bilangan Cacah</span>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span id="badge-difficulty" class="badge-diff diff-easy">🟢 Mudah ⭐</span>
+            <span id="streak-indicator" class="streak-pill hidden">🔥 2x Benar!</span>
+          </div>
+        </div>
+
+        <div class="progress-container">
+          <div class="progress-track">
+            <div id="progress-bar-fill" class="progress-fill"></div>
+          </div>
+          <span id="text-progress" class="progress-text">Soal 1 dari 20</span>
+        </div>
+      </div>
+
+      <!-- Kotak Pertanyaan -->
+      <div class="question-box">
+        <button type="button" id="btn-listen-question" class="btn-listen" title="Dengarkan Soal Dibacakan">
+          <span>🔊</span> Dengarkan Soal
+        </button>
+        <div id="question-text" class="question-title">
+          Memuat pertanyaan...
+        </div>
+      </div>
+
+      <!-- Opsi Jawaban Pilihan Ganda -->
+      <div id="options-container" class="options-grid">
+        <!-- Opsi A, B, C, D di-render secara dinamis oleh JavaScript -->
+      </div>
+    </section>
+
+    <!-- ==========================================
+         LAYAR 3: HASIL NILAI SISWA
+         ========================================== -->
+    <section id="result-screen" class="game-card hidden">
+      <div class="result-hero">
+        <div class="result-badge">🏆</div>
+        <h2 id="result-student-name">Nama Siswa (3A)</h2>
+        <p>Laporan Hasil Petualangan Kuis Matematika</p>
+
+        <div class="result-score-circle">
+          <span id="result-score-number" class="score-num">0</span>
+          <span class="score-label">Nilai Akhir</span>
+        </div>
+
+        <div>
+          <span id="result-status-badge" class="status-pill status-tuntas">TUNTAS KKM 🎉</span>
+        </div>
+      </div>
+
+      <div class="result-summary-grid">
+        <div class="summary-card correct">
+          <div id="result-correct-count" class="summary-num">0</div>
+          <div class="summary-label">Jawaban Benar ✅</div>
+        </div>
+        <div class="summary-card wrong">
+          <div id="result-wrong-count" class="summary-num">0</div>
+          <div class="summary-label">Jawaban Salah ❌</div>
+        </div>
+      </div>
+
+      <!-- Analisis Capaian Tiap Bab -->
+      <div class="bab-breakdown">
+        <h3>📊 Penguasaan Materi Tiap Bab:</h3>
+        
+        <div class="bab-bar-item">
+          <div class="bab-bar-label">
+            <span>Bab 1: Bilangan Cacah s.d 1.000</span>
+            <span id="result-bab1-score">0%</span>
+          </div>
+          <div class="bab-bar-track">
+            <div id="result-bab1-bar" class="bab-bar-fill" style="width: 0%; background: var(--sky-500);"></div>
+          </div>
+        </div>
+
+        <div class="bab-bar-item">
+          <div class="bab-bar-label">
+            <span>Bab 2: Kalimat Matematika</span>
+            <span id="result-bab2-score">0%</span>
+          </div>
+          <div class="bab-bar-track">
+            <div id="result-bab2-bar" class="bab-bar-fill" style="width: 0%; background: var(--purple-500);"></div>
+          </div>
+        </div>
+
+        <div class="bab-bar-item">
+          <div class="bab-bar-label">
+            <span>Bab 3: Pengukuran Panjang dan Berat</span>
+            <span id="result-bab3-score">0%</span>
+          </div>
+          <div class="bab-bar-track">
+            <div id="result-bab3-bar" class="bab-bar-fill" style="width: 0%; background: var(--orange-500);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pesan Pedagogis Edukatif -->
+      <div class="advice-card">
+        <strong>💬 Pesan Guru:</strong><br/>
+        <span id="result-advice">Tetap rajin belajar dan berlatih matematika ya!</span>
+      </div>
+
+      <div style="text-align: center; margin-top: 20px;">
+        <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 12px;">
+          🔒 <i>Nilaimu telah disimpan secara aman ke rekap guru. Terima kasih sudah belajar dengan jujur!</i>
+        </p>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         LAYAR 4: DASBOR GURU (PIN 0123)
+         ========================================== -->
+    <section id="teacher-screen" class="game-card hidden">
+      <div class="teacher-header">
+        <div>
+          <h2>📊 Dasbor Rekap Guru</h2>
+          <p style="color: #64748b; font-size: 0.95rem;">Rekapitulasi Nilai Kuis Matematika Kelas 3 SD Real-time</p>
+        </div>
+        <div class="teacher-header-actions">
+          <button type="button" class="btn-pill-control" id="btn-open-gas-settings">
+            ⚙️ Database Cloud
+          </button>
+          <button type="button" class="btn-chunky btn-outline btn-sm" id="btn-exit-teacher">
+            Keluar Dasbor ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Ringkasan Statistik Siswa -->
+      <div class="teacher-stats-grid">
+        <div class="stat-box">
+          <div id="teacher-stat-total" class="stat-val">0</div>
+          <div class="stat-title">Total Siswa</div>
+        </div>
+        <div class="stat-box">
+          <div id="teacher-stat-avg" class="stat-val" style="color: #0284c7;">0</div>
+          <div class="stat-title">Nilai Rata-rata</div>
+        </div>
+        <div class="stat-box">
+          <div id="teacher-stat-highest" class="stat-val" style="color: #16a34a;">0</div>
+          <div class="stat-title">Nilai Tertinggi</div>
+        </div>
+        <div class="stat-box">
+          <div id="teacher-stat-lowest" class="stat-val" style="color: #e11d48;">0</div>
+          <div class="stat-title">Nilai Terendah</div>
+        </div>
+        <div class="stat-box">
+          <div id="teacher-stat-passed" class="stat-val" style="color: #ca8a04;">0</div>
+          <div class="stat-title">Tuntas KKM (>=75)</div>
+        </div>
+      </div>
+
+      <!-- Grafik Daya Serap Materi per Bab -->
+      <div class="bab-breakdown" style="border-top: none; margin-top: 0; padding-top: 0;">
+        <h3 style="margin-bottom: 10px;">📈 Rata-rata Pemahaman Materi per Bab:</h3>
+        <div class="bab-bar-item">
+          <div class="bab-bar-label">
+            <span>Bab 1: Bilangan Cacah s.d 1.000</span>
+            <span id="teacher-bab1-stat">0%</span>
+          </div>
+          <div class="bab-bar-track">
+            <div id="teacher-bab1-bar" class="bab-bar-fill" style="width: 0%; background: var(--sky-500);"></div>
+          </div>
+        </div>
+        <div class="bab-bar-item">
+          <div class="bab-bar-label">
+            <span>Bab 2: Kalimat Matematika</span>
+            <span id="teacher-bab2-stat">0%</span>
+          </div>
+          <div class="bab-bar-track">
+            <div id="teacher-bab2-bar" class="bab-bar-fill" style="width: 0%; background: var(--purple-500);"></div>
+          </div>
+        </div>
+        <div class="bab-bar-item">
+          <div class="bab-bar-label">
+            <span>Bab 3: Pengukuran Panjang dan Berat</span>
+            <span id="teacher-bab3-stat">0%</span>
+          </div>
+          <div class="bab-bar-track">
+            <div id="teacher-bab3-bar" class="bab-bar-fill" style="width: 0%; background: var(--orange-500);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bar Tombol Ekspor Multi-Format -->
+      <div class="export-bar">
+        <span class="export-title">📥 Unduh Laporan Rekap Nilai:</span>
+        <div class="export-btn-group">
+          <button type="button" id="btn-export-excel" class="btn-chunky btn-export-excel btn-sm">
+            📊 Unduh Excel (.xlsx)
+          </button>
+          <button type="button" id="btn-export-pdf" class="btn-chunky btn-export-pdf btn-sm">
+            📑 Unduh PDF (.pdf)
+          </button>
+          <button type="button" id="btn-export-word" class="btn-chunky btn-export-word btn-sm">
+            📝 Unduh Word (.docx)
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Kelas & Pencarian Siswa -->
+      <div class="filter-row">
+        <div class="class-tabs">
+          <button type="button" class="class-tab-btn active" data-kelas="Semua">Semua Kelas</button>
+          <button type="button" class="class-tab-btn" data-kelas="3A">Kelas 3A</button>
+          <button type="button" class="class-tab-btn" data-kelas="3B">Kelas 3B</button>
+          <button type="button" class="class-tab-btn" data-kelas="3C">Kelas 3C</button>
+          <button type="button" class="class-tab-btn" data-kelas="3D">Kelas 3D</button>
+        </div>
+
+        <div class="search-box">
+          <input type="text" id="teacher-search-input" class="form-input" style="padding: 8px 12px; font-size: 0.95rem;" placeholder="Cari nama siswa...">
+        </div>
+      </div>
+
+      <!-- Tabel Data Siswa -->
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 50px; text-align: center;">No</th>
+              <th>Nama Siswa</th>
+              <th style="text-align: center;">Kelas</th>
+              <th style="text-align: center;">Skor</th>
+              <th style="text-align: center;">Benar</th>
+              <th style="text-align: center;">Salah</th>
+              <th style="text-align: center;">Bab 1</th>
+              <th style="text-align: center;">Bab 2</th>
+              <th style="text-align: center;">Bab 3</th>
+              <th style="text-align: center;">Waktu Selesai</th>
+              <th style="text-align: center;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="teacher-table-body">
+            <!-- Data baris siswa dimuat secara dinamis -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================
+       MODAL 1: UMPAN BALIK EDUKATIF (BENAR/SALAH)
+       ========================================== -->
+  <div id="feedback-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="feedback-header">
+        <span id="feedback-icon" class="feedback-icon">🌟🎉</span>
+        <h3 id="feedback-title" class="feedback-title text-success">Jawabanmu Benar!</h3>
+      </div>
+
+      <div class="feedback-body">
+        <p id="feedback-appreciation" class="appreciation-text">Hebat sekali!</p>
+        <p id="feedback-explanation" class="explanation-text">Penjelasan langkah pengerjaan.</p>
+      </div>
+
+      <button type="button" id="btn-next-question" class="btn-chunky btn-primary btn-block">
+        Lanjut ke Soal Berikutnya ➔
+      </button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL 2: INPUT PIN GURU (4 DIGIT: 0123)
+       ========================================== -->
+  <div id="teacher-pin-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 380px; text-align: center;">
+      <h3 style="font-family: var(--font-heading); color: var(--sky-600); margin-bottom: 6px;">
+        🔒 Akses Khusus Guru
+      </h3>
+      <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 16px;">
+        Masukkan PIN 4 digit untuk membuka dasbor rekap nilai siswa:
+      </p>
+
+      <input type="password" id="teacher-pin-input" class="form-input" maxlength="4" style="text-align: center; font-size: 1.8rem; letter-spacing: 12px; font-weight: bold; margin-bottom: 12px;" placeholder="••••" autocomplete="off">
+      <div id="teacher-pin-error" class="hidden" style="color: #e11d48; font-weight: bold; font-size: 0.9rem; margin-bottom: 10px;"></div>
+
+      <!-- Keypad Visual PIN -->
+      <div class="pin-keypad">
+        <button type="button" class="pin-key" data-num="1">1</button>
+        <button type="button" class="pin-key" data-num="2">2</button>
+        <button type="button" class="pin-key" data-num="3">3</button>
+        <button type="button" class="pin-key" data-num="4">4</button>
+        <button type="button" class="pin-key" data-num="5">5</button>
+        <button type="button" class="pin-key" data-num="6">6</button>
+        <button type="button" class="pin-key" data-num="7">7</button>
+        <button type="button" class="pin-key" data-num="8">8</button>
+        <button type="button" class="pin-key" data-num="9">9</button>
+        <button type="button" class="pin-key pin-key-danger" data-num="C">C</button>
+        <button type="button" class="pin-key" data-num="0">0</button>
+        <button type="button" class="pin-key pin-key-danger" data-num="DEL">⌫</button>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 14px;">
+        <button type="button" id="btn-close-pin-modal" class="btn-chunky btn-outline btn-block btn-sm">
+          Batal
+        </button>
+        <button type="button" id="btn-submit-pin" class="btn-chunky btn-primary btn-block btn-sm">
+          Buka Dasbor ➔
+        </button>
+      </div>
+      <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 12px;">
+        (PIN Default Guru: <code>0123</code>)
+      </p>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL 3: PENGATURAN GOOGLE APPS SCRIPT (GAS)
+       ========================================== -->
+  <div id="gas-settings-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 520px;">
+      <h3 style="font-family: var(--font-heading); color: var(--sky-600); margin-bottom: 8px;">
+        ☁️ Pengaturan Database Cloud
+      </h3>
+      <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 16px; line-height: 1.4;">
+        Sambungkan aplikasi kuis ini ke Google Sheets pribadi Bapak/Ibu guru secara 100% gratis menggunakan Google Apps Script (GAS).
+      </p>
+
+      <div class="form-group">
+        <label for="gas-url-input">URL Web App Google Apps Script:</label>
+        <input type="url" id="gas-url-input" class="form-input" placeholder="https://script.google.com/macros/s/.../exec">
+        <small style="color: #64748b; font-size: 0.8rem; display: block; margin-top: 4px;">
+          *Bila dikosongkan, aplikasi akan menggunakan database penyimpanan lokal (offline demo) secara otomatis.
+        </small>
+      </div>
+
+      <div class="alert-box alert-info" style="font-size: 0.85rem; padding: 12px;">
+        <b>Petunjuk Singkat:</b><br/>
+        1. Buka file <code>backend/Code.gs</code> di proyek ini.<br/>
+        2. Salin kode ke Google Spreadsheet (menu Ekstensi ➔ Apps Script).<br/>
+        3. Terapkan sebagai Web App (Akses: Siapa Saja), lalu tempelkan link URL-nya di atas.
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 16px;">
+        <button type="button" id="btn-close-gas-modal" class="btn-chunky btn-outline btn-block btn-sm">
+          Tutup
+        </button>
+        <button type="button" id="btn-save-gas-url" class="btn-chunky btn-primary btn-block btn-sm">
+          Simpan Konfigurasi 💾
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skrip Modul Aplikasi -->
+  <script src="js/quiz-data.js"></script>
+  <script src="js/audio-engine.js"></script>
+  <script src="js/database.js"></script>
+  <script src="js/export-engine.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
