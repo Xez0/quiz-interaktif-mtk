@@ -464,24 +464,34 @@ class QuizApp {
 
   setupQuestionQueue() {
     // 50 Soal Matematika Lengkap Bab 1, 2, dan 3 Sesuai Kurikulum Merdeka
-    // Fitur Anti-Nyontek: Posisi pilihan jawaban diacak secara dinamis per sesi siswa
-    // Huruf A, B, C, D tetap berurutan, namun teks jawaban diacak posisinya sehingga siswa sebangku tidak bisa saling contek
-    this.questionQueue = QUIZ_DATA.map(q => {
-      const correctText = q.options[q.answer];
-      const shuffled = [...q.options];
+    // Fitur Anti-Nyontek Total (Dual-Layer Randomization):
+    // 1. Urutan 50 soal diacak per siswa (Siswa A soal No. 1 berbeda dengan Siswa B)
+    // 2. Urutan pilihan jawaban A, B, C, D di dalam tiap soal juga diacak per siswa
 
-      // Algoritma Fisher-Yates Shuffle untuk mengacak opsi jawaban
-      for (let i = shuffled.length - 1; i > 0; i--) {
+    // Langkah 1: Kloning dan acak urutan soal (Fisher-Yates)
+    const shuffledBank = [...QUIZ_DATA];
+    for (let i = shuffledBank.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledBank[i], shuffledBank[j]] = [shuffledBank[j], shuffledBank[i]];
+    }
+
+    // Langkah 2: Acak opsi jawaban di dalam masing-masing soal
+    this.questionQueue = shuffledBank.map(q => {
+      const correctText = q.options[q.answer];
+      const shuffledOptions = [...q.options];
+
+      // Acak posisi pilihan jawaban
+      for (let i = shuffledOptions.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
       }
 
       // Kunci jawaban secara otomatis melacak indeks posisi baru
-      const newAnswerIndex = shuffled.indexOf(correctText);
+      const newAnswerIndex = shuffledOptions.indexOf(correctText);
 
       return {
         ...q,
-        options: shuffled,
+        options: shuffledOptions,
         answer: newAnswerIndex
       };
     });
