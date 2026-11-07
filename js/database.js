@@ -15,8 +15,11 @@ class DatabaseManager {
     this.STUDENT_COMPLETED_KEY = 'quiz_student_completed_session';
     this.TEACHER_PIN = '0123';
 
-    // Ambil URL Google Apps Script jika sudah pernah disimpan
-    this.gasUrl = localStorage.getItem(this.GAS_URL_KEY) || '';
+    // URL Google Apps Script resmi yang telah di-deploy
+    this.DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbx57CTwLK-SwpXhhWVUgBBXlSLhFGOxPgzNOZxXkPx0F0FD82EwccDjDYvk1pcN6S6U6A/exec';
+
+    // Ambil URL Google Apps Script dari local storage atau gunakan default
+    this.gasUrl = localStorage.getItem(this.GAS_URL_KEY) || this.DEFAULT_GAS_URL;
 
     // Inisialisasi data sampel awal jika penyimpanan lokal masih kosong
     this.seedInitialLocalData();
@@ -315,3 +318,4 @@ class DatabaseManager {
 
 // Inisialisasi Instance Global
 window.dbManager = new DatabaseManager();
+
