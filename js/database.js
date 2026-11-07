@@ -19,7 +19,8 @@ class DatabaseManager {
     this.DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbx57CTwLK-SwpXhhWVUgBBXlSLhFGOxPgzNOZxXkPx0F0FD82EwccDjDYvk1pcN6S6U6A/exec';
 
     // Ambil URL Google Apps Script dari local storage atau gunakan default
-    this.gasUrl = localStorage.getItem(this.GAS_URL_KEY) || this.DEFAULT_GAS_URL;
+    const savedGasUrl = localStorage.getItem(this.GAS_URL_KEY);
+    this.gasUrl = (savedGasUrl && savedGasUrl.startsWith('https://script.google.com')) ? savedGasUrl : this.DEFAULT_GAS_URL;
 
     // Inisialisasi data sampel awal jika penyimpanan lokal masih kosong
     this.seedInitialLocalData();
@@ -182,11 +183,11 @@ class DatabaseManager {
     // 2. Jika URL Google Apps Script terpasang, kirim ke Cloud Google Sheets
     if (this.gasUrl && this.gasUrl.startsWith('https://script.google.com')) {
       try {
-        const response = await fetch(this.gasUrl, {
+        await fetch(this.gasUrl, {
           method: 'POST',
-          mode: 'no-cors', // standard untuk Google Apps Script web app
+          mode: 'no-cors',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'text/plain;charset=utf-8'
           },
           body: JSON.stringify({
             action: 'submitQuiz',

@@ -55,7 +55,6 @@ class QuizApp {
     // Welcome Form
     this.studentNameInput = document.getElementById('student-name');
     this.studentClassSelect = document.getElementById('student-class');
-    this.quizModeSelect = document.getElementById('quiz-mode');
     this.btnStartQuiz = document.getElementById('btn-start-quiz');
     this.alreadyNotice = document.getElementById('already-notice');
 
@@ -356,7 +355,6 @@ class QuizApp {
   handleStartQuiz() {
     const nama = this.studentNameInput.value.trim();
     const kelas = this.studentClassSelect.value;
-    const mode = this.quizModeSelect.value;
 
     if (!nama) {
       alert("Silakan ketik nama lengkapmu terlebih dahulu ya!");
@@ -373,42 +371,22 @@ class QuizApp {
     }
 
     window.audioEngine.playClick();
-    this.currentStudent = { nama, kelas, mode };
+    this.currentStudent = { nama, kelas };
     this.startTime = new Date();
     this.answersHistory = [];
     this.streakCount = 0;
     this.currentIndex = 0;
     this.currentDifficulty = 'easy';
 
-    // Buat antrean soal
-    this.setupQuestionQueue(mode);
+    // Buat antrean 50 soal lengkap
+    this.setupQuestionQueue();
     this.showScreen('quiz');
     this.loadQuestionAtCurrentIndex();
   }
 
-  setupQuestionQueue(mode) {
-    if (mode === 'complete') {
-      // 50 Soal Lengkap
-      this.questionQueue = [...QUIZ_DATA];
-    } else {
-      // Mode Petualangan Adaptif (20 Soal Pilihan Cerdas Terdistribusi)
-      // 7 Soal Bab 1, 7 Soal Bab 2, 6 Soal Bab 3
-      const bab1 = QUIZ_DATA.filter(q => q.babId === 1);
-      const bab2 = QUIZ_DATA.filter(q => q.babId === 2);
-      const bab3 = QUIZ_DATA.filter(q => q.babId === 3);
-
-      const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
-
-      const selectedBab1 = shuffle(bab1).slice(0, 7);
-      const selectedBab2 = shuffle(bab2).slice(0, 7);
-      const selectedBab3 = shuffle(bab3).slice(0, 6);
-
-      // Urutkan soal awal dengan dominasi mudah, lalu meningkat
-      this.questionQueue = [...selectedBab1, ...selectedBab2, ...selectedBab3].sort((a, b) => {
-        const diffWeight = { easy: 1, medium: 2, hard: 3 };
-        return diffWeight[a.difficulty] - diffWeight[b.difficulty];
-      });
-    }
+  setupQuestionQueue() {
+    // 50 Soal Matematika Lengkap Bab 1, 2, dan 3 Sesuai Kurikulum Merdeka
+    this.questionQueue = [...QUIZ_DATA];
   }
 
   loadQuestionAtCurrentIndex() {
@@ -857,3 +835,4 @@ class QuizApp {
 document.addEventListener('DOMContentLoaded', () => {
   window.quizApp = new QuizApp();
 });
+
